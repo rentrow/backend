@@ -1,0 +1,77 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               Int        @id @default(autoincrement())
+  name             String
+  email            String     @unique
+  password         String     @default("")
+  role             String     @default("USER")   // USER or LANDLORD
+  phone            String?
+  verified         Boolean    @default(false)
+  properties       Property[]
+  sentMessages     Message[]  @relation("SentMessages")
+  receivedMessages Message[]  @relation("ReceivedMessages")
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+}
+
+model Property {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String
+  type        String     // SINGLE_ROOM, 1RK, 1BHK, 2BHK, 3BHK, 4BHK, INDEPENDENT_HOUSE, VILLA, PG, COMMERCIAL
+  price       Float
+  address     String
+  locality    String?
+  lat         Float?
+  lng         Float?
+  status      String     @default("PENDING_PAYMENT") // ACTIVE, EXPIRED, PENDING_PAYMENT, BOOKED
+  expiresAt   DateTime?
+  bookedAt    DateTime?
+  ownerId     Int
+  owner       User       @relation(fields: [ownerId], references: [id])
+  images      String     @default("[]")          // JSON array of base64/URLs
+  messages    Message[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model OtpCode {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  purpose   String   // REGISTER | LOGIN
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  propertyId Int
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  senderId   Int
+  sender     User     @relation("SentMessages",    fields: [senderId],   references: [id])
+  receiverId Int
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  body       String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Transaction {
+  id                Int      @id @default(autoincrement())
+  propertyId        Int
+  amount            Float
+  status            String   @default("SUCCESS")
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  createdAt         DateTime @default(now())
+}
